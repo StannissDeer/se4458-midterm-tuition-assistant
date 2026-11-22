@@ -1,0 +1,92 @@
+== REST API ==
+============================= test session starts ==============================
+platform linux -- Python 3.13.18, pytest-9.1.1, pluggy-1.6.0 -- /usr/local/bin/python
+cachedir: .pytest_cache
+rootdir: /home/claude/tuition-assistant/api
+plugins: platformdirs-4.13.5, anyio-4.15.1
+collecting ... collected 43 items
+
+tests/test_api.py::TestAuth::test_login_success_returns_jwt PASSED       [  2%]
+tests/test_api.py::TestAuth::test_login_wrong_password PASSED            [  4%]
+tests/test_api.py::TestAuth::test_login_validation_error PASSED          [  6%]
+tests/test_api.py::TestMobileQuery::test_overall_balance_without_auth PASSED [  9%]
+tests/test_api.py::TestMobileQuery::test_term_balance PASSED             [ 11%]
+tests/test_api.py::TestMobileQuery::test_limit_three_per_student_per_day PASSED [ 13%]
+tests/test_api.py::TestMobileQuery::test_limit_is_keyed_by_student_not_client PASSED [ 16%]
+tests/test_api.py::TestMobileQuery::test_unknown_student PASSED          [ 18%]
+tests/test_api.py::TestMobileQuery::test_invalid_term_format PASSED      [ 20%]
+tests/test_api.py::TestMobileQuery::test_unknown_term PASSED             [ 23%]
+tests/test_api.py::TestBankingQuery::test_own_record PASSED              [ 25%]
+tests/test_api.py::TestBankingQuery::test_no_daily_limit PASSED          [ 27%]
+tests/test_api.py::TestBankingQuery::test_requires_token PASSED          [ 30%]
+tests/test_api.py::TestBankingQuery::test_cannot_read_other_student PASSED [ 32%]
+tests/test_api.py::TestBankingQuery::test_admin_can_read_any PASSED      [ 34%]
+tests/test_api.py::TestBankingQuery::test_expired_token PASSED           [ 37%]
+tests/test_api.py::TestBankingQuery::test_tampered_token PASSED          [ 39%]
+tests/test_api.py::TestPayTuition::test_partial_payment PASSED           [ 41%]
+tests/test_api.py::TestPayTuition::test_full_payment_then_already_paid PASSED [ 44%]
+tests/test_api.py::TestPayTuition::test_duplicate_transaction_rejected_and_balance_unchanged PASSED [ 46%]
+tests/test_api.py::TestPayTuition::test_amount_exceeding_balance PASSED  [ 48%]
+tests/test_api.py::TestPayTuition::test_zero_or_negative_amount PASSED   [ 51%]
+tests/test_api.py::TestPayTuition::test_no_tuition_for_term PASSED       [ 53%]
+tests/test_api.py::TestPayTuition::test_cannot_pay_for_other_student PASSED [ 55%]
+tests/test_api.py::TestPayTuition::test_requires_token PASSED            [ 58%]
+tests/test_api.py::TestAddTuition::test_create_new PASSED                [ 60%]
+tests/test_api.py::TestAddTuition::test_duplicate_updates_existing PASSED [ 62%]
+tests/test_api.py::TestAddTuition::test_update_below_paid_rejected PASSED [ 65%]
+tests/test_api.py::TestAddTuition::test_currency_change_after_payment_rejected PASSED [ 67%]
+tests/test_api.py::TestAddTuition::test_new_student_is_created PASSED    [ 69%]
+tests/test_api.py::TestAddTuition::test_invalid_input PASSED             [ 72%]
+tests/test_api.py::TestAddTuition::test_student_role_forbidden PASSED    [ 74%]
+tests/test_api.py::TestAddTuitionBatch::test_all_rows_succeed PASSED     [ 76%]
+tests/test_api.py::TestAddTuitionBatch::test_partial_failure_reports_counts PASSED [ 79%]
+tests/test_api.py::TestAddTuitionBatch::test_bad_header PASSED           [ 81%]
+tests/test_api.py::TestAddTuitionBatch::test_requires_admin PASSED       [ 83%]
+tests/test_api.py::TestUnpaidStatus::test_paged_list PASSED              [ 86%]
+tests/test_api.py::TestUnpaidStatus::test_second_page PASSED             [ 88%]
+tests/test_api.py::TestUnpaidStatus::test_page_beyond_end_is_empty PASSED [ 90%]
+tests/test_api.py::TestUnpaidStatus::test_invalid_page_size PASSED       [ 93%]
+tests/test_api.py::TestUnpaidStatus::test_requires_admin PASSED          [ 95%]
+tests/test_api.py::TestUnpaidStatus::test_requires_token PASSED          [ 97%]
+tests/test_api.py::test_openapi_lists_versioned_routes PASSED            [100%]
+
+============================== 43 passed in 4.93s ==============================
+== MCP server ==
+============================= test session starts ==============================
+platform linux -- Python 3.13.18, pytest-9.1.1, pluggy-1.6.0 -- /usr/local/bin/python
+cachedir: .pytest_cache
+rootdir: /home/claude/tuition-assistant/mcp_server
+plugins: platformdirs-4.13.5, anyio-4.15.1
+collecting ... collected 10 items
+
+tests/test_mcp.py::test_document_is_split_into_section_chunks PASSED     [ 10%]
+tests/test_mcp.py::test_document_id_is_extracted PASSED                  [ 20%]
+tests/test_mcp.py::test_index_is_persisted_and_reloaded PASSED           [ 30%]
+tests/test_mcp.py::test_retrieval_fall_deadline PASSED                   [ 40%]
+tests/test_mcp.py::test_retrieval_installments PASSED                    [ 50%]
+tests/test_mcp.py::test_retrieval_late_fee PASSED                        [ 60%]
+tests/test_mcp.py::test_retrieval_refund PASSED                          [ 70%]
+tests/test_mcp.py::test_no_match_returns_empty PASSED                    [ 80%]
+tests/test_mcp.py::test_mcp_tool_is_listed_and_callable PASSED           [ 90%]
+tests/test_mcp.py::test_mcp_empty_query_edge_case PASSED                 [100%]
+
+============================== 10 passed in 0.53s ==============================
+== AI Agent ==
+============================= test session starts ==============================
+platform linux -- Python 3.13.18, pytest-9.1.1, pluggy-1.6.0 -- /usr/local/bin/python
+cachedir: .pytest_cache
+rootdir: /home/claude/tuition-assistant/agent
+plugins: platformdirs-4.13.5, anyio-4.15.1
+collecting ... collected 9 items
+
+tests/test_agent.py::test_mcp_only_scenario PASSED                       [ 11%]
+tests/test_agent.py::test_rest_only_scenario PASSED                      [ 22%]
+tests/test_agent.py::test_combined_scenario_parallel_calls PASSED        [ 33%]
+tests/test_agent.py::test_payment_confirmed_calls_api PASSED             [ 44%]
+tests/test_agent.py::test_payment_declined_never_calls_api PASSED        [ 55%]
+tests/test_agent.py::test_payment_for_unknown_term_is_rejected_before_confirmation PASSED [ 66%]
+tests/test_agent.py::test_payment_exceeding_balance_is_rejected_by_api PASSED [ 77%]
+tests/test_agent.py::test_identity_comes_from_session_not_prompt PASSED  [ 88%]
+tests/test_agent.py::test_trace_format_contains_tool_input_result_and_answer PASSED [100%]
+
+============================== 9 passed in 2.92s ===============================

@@ -1,0 +1,101 @@
+# Kong Gateway (DB-less, declarative). Every REST call - mobile, banking, admin and the AI Agent -
+# enters through this gateway. The MCP server is NOT behind the gateway (separate MCP path).
+#
+# Public routes are versioned: /api/v1/...  A future v2 is added as new routes (/api/v2/...)
+# pointing to a new service, so v1 clients keep working.
+_format_version: "3.0"
+_transform: true
+
+services:
+  - name: tuition-api-v1
+    url: http://api:8000          # docker-compose service name (cloud: the API's internal URL)
+    connect_timeout: 5000
+    read_timeout: 30000
+    routes:
+      # ---------- public: login ----------
+      - name: auth-v1
+        paths: ["/api/v1/auth"]
+        methods: [POST]
+        strip_path: false
+
+      # ---------- public (no auth): University Mobile App, 3 calls / student / day ----------
+      - name: mobile-tuition-v1
+        paths: ["~/api/v1/mobile/tuition/(?<studentNo>[^/]+)$"]
+        methods: [GET]
+        strip_path: false
+        plugins:
+          # Put the student number from the URL into a header (overwriting anything the client
+          # sent), so the rate limit below is keyed by STUDENT IDENTITY, not by client IP.
+          - name: pre-function
+            config:
+              access:
+                - |
+                  local caps = kong.request.get_uri_captures()
+                  local sn = caps and caps.named and caps.named["studentNo"]
+                  if not sn or sn == "" then
+                    return kong.response.exit(400, { error = { status = 400, code = "INVALID_STUDENT", message = "studentNo is required" } })
+                  end
+                  kong.service.request.set_header("X-Student-No", sn)
+          - name: rate-limiting
+            config:
+              day: 3
+              limit_by: header
+              header_name: X-Student-No
+              policy: local
+              fault_tolerant: true
+              error_code: 429
+              error_message: "Mobile tuition query limit (3 per student per day) exceeded"
+
+      # ---------- protected (JWT): Banking App ----------
+      - name: banking-tuition-v1
+        paths: ["/api/v1/banking"]
+        methods: [GET, POST]
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              key_claim_name: iss
+              claims_to_verify: [exp]
+              header_names: [authorization]
+
+      # ---------- protected (JWT): University Web Site - Admin ----------
+      # The gateway authenticates; the API additionally authorizes role=admin.
+      - name: admin-tuition-v1
+        paths: ["/api/v1/admin"]
+        methods: [GET, POST]
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              key_claim_name: iss
+              claims_to_verify: [exp]
+              header_names: [authorization]
+
+      # ---------- API documentation through the gateway ----------
+      - name: docs-v1
+        paths: ["/docs", "/openapi.json", "/health"]
+        methods: [GET]
+        strip_path: false
+
+# The JWT issuer registered at the gateway. `key` must equal the token's `iss` claim
+# (JWT_ISSUER) and `secret` must equal the API's JWT_SECRET. Change both for production.
+consumers:
+  - username: tuition-auth-service
+    jwt_secrets:
+      - key: tuition-auth
+        algorithm: HS256
+        secret: change-me-dev-secret-at-least-32-bytes!!
+
+plugins:
+  # Global safety net: 120 requests/minute per client IP for everything.
+  - name: rate-limiting
+    config:
+      minute: 120
+      limit_by: ip
+      policy: local
+      fault_tolerant: true
+  - name: correlation-id
+    config:
+      header_name: X-Request-ID
+      generator: uuid
+      echo_downstream: true

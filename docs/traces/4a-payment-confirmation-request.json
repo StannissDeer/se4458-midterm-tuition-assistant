@@ -1,0 +1,32 @@
+{
+  "question": "Pay $500 of my 2026-FALL balance",
+  "tool_calls": [
+    {
+      "step": 1,
+      "tool": "query_tuition",
+      "channel": "REST via API Gateway",
+      "input": {
+        "term": "2026-FALL"
+      },
+      "result": {
+        "studentNo": "2021001",
+        "scope": "TERM",
+        "term": "2026-FALL",
+        "tuitionTotal": 3000.0,
+        "paidAmount": 1000.0,
+        "balance": 2000.0,
+        "currency": "USD",
+        "terms": [
+          {
+            "term": "2026-FALL",
+            "tuitionTotal": 3000.0,
+            "paidAmount": 1000.0,
+            "balance": 2000.0,
+            "currency": "USD"
+          }
+        ]
+      }
+    }
+  ],
+  "final_answer": "Please confirm if you would like to proceed with recording this payment:\n\n* **Student Number:** 2021001\n* **Term:** 2026-FALL\n* **Payment Amount:** $500 USD\n* **Current Term Balance:** $2,000 USD *(Remaining balance after this payment would be $1,500 USD)*\n\nDo you authorize and confirm this payment?"
+}

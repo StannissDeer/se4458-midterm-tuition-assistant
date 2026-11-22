@@ -1,0 +1,4 @@
+# Everything needed to run all services and all tests locally
+-r api/requirements.txt
+-r mcp_server/requirements.txt
+-r agent/requirements.txt

@@ -1,0 +1,50 @@
+{
+  "question": "When is the payment deadline?",
+  "tool_calls": [
+    {
+      "step": 1,
+      "tool": "search_tuition_policies",
+      "channel": "MCP",
+      "input": {
+        "query": "payment deadline"
+      },
+      "result": {
+        "document": "University_Tuition_Policies.md",
+        "documentId": "UNI-TUITION-2026-01",
+        "query": "payment deadline",
+        "matches": [
+          {
+            "section": "8.1",
+            "heading": "When is the Fall tuition deadline?",
+            "parentSection": "8. Frequently asked questions",
+            "score": 3.27,
+            "text": "September 30, 2026. See Section 2.1."
+          },
+          {
+            "section": "3.3",
+            "heading": "Installment schedule",
+            "parentSection": "3. Installment policy",
+            "score": 3.258,
+            "text": "For Fall 2026, approved installment due dates are **September 30, October 31, and November 30, 2026**. For Spring 2027, approved installment due dates are **February 15, March 15, and April 15, 2027**."
+          },
+          {
+            "section": "2.2",
+            "heading": "Spring term",
+            "parentSection": "2. Payment deadlines",
+            "score": 3.15,
+            "text": "The payment deadline for the Spring 2027 term is **February 15, 2027**. Deadlines apply in the university's local time zone."
+          },
+          {
+            "section": "2.1",
+            "heading": "Fall term",
+            "parentSection": "2. Payment deadlines",
+            "score": 3.068,
+            "text": "The payment deadline for the Fall 2026 term is **September 30, 2026**. A student should settle the outstanding balance or have an approved installment arrangement by that date."
+          }
+        ],
+        "message": null
+      }
+    }
+  ],
+  "final_answer": "The payment deadlines for the upcoming terms are:\n\n* **Fall 2026 Term:** September 30, 2026 (Section 2.1 - Fall term)\n* **Spring 2027 Term:** February 15, 2027 (Section 2.2 - Spring term)\n\nStudents must settle their balance or have an approved installment plan by these dates."
+}

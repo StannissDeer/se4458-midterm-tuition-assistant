@@ -8,7 +8,7 @@ A conversational assistant for students asking about tuition deadlines, installm
 > **Live deployment (Azure):**
 > - API Gateway: https://tuition-gateway.delightfulforest-2c0bb7e1.polandcentral.azurecontainerapps.io (Swagger: `/docs`)
 > - MCP server: https://tuition-mcp.delightfulforest-2c0bb7e1.polandcentral.azurecontainerapps.io/mcp
-> - Demo video: <VIDEO_LINK>
+> - Demo video: https://drive.google.com/file/d/1NbTcMxXFx8qkR9Zu_D123nDn8RLWA1vM/view?usp=sharing
 
 ---
 

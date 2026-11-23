@@ -13,6 +13,9 @@ class Settings:
     JWT_EXPIRE_MINUTES: int = int(os.getenv("JWT_EXPIRE_MINUTES", "60"))
     MOBILE_DAILY_LIMIT: int = int(os.getenv("MOBILE_DAILY_LIMIT", "3"))
     MAX_PAGE_SIZE: int = 100
+    # When set, every request must carry X-Gateway-Secret with this value. Only the API Gateway
+    # knows it, so the API cannot be called directly even if its URL is publicly reachable.
+    GATEWAY_SECRET: str = os.getenv("GATEWAY_SECRET", "")
 
 
 settings = Settings()

@@ -1,0 +1,81 @@
+{
+  "question": "Can I pay my outstanding balance in installments?",
+  "tool_calls": [
+    {
+      "step": 1,
+      "tool": "search_tuition_policies",
+      "channel": "MCP",
+      "input": {
+        "query": "installment plan eligibility rules"
+      },
+      "result": {
+        "document": "University_Tuition_Policies.md",
+        "documentId": "UNI-TUITION-2026-01",
+        "query": "installment plan eligibility rules",
+        "matches": [
+          {
+            "section": "3.1",
+            "heading": "Eligibility",
+            "parentSection": "3. Installment policy",
+            "score": 5.491,
+            "text": "Students with an outstanding balance of at least **$300** may request an installment arrangement. An arrangement is subject to approval; this policy does not establish whether a particular student has been approved."
+          },
+          {
+            "section": "3.4",
+            "heading": "Partial payments versus installment approval",
+            "parentSection": "3. Installment policy",
+            "score": 4.745,
+            "text": "The payment API can record a partial payment and retain the remaining balance. **A partial payment is not, by itself, approval of an installment plan.** The AI assistant must not promise approval based solely on the policy document or a balance lookup."
+          },
+          {
+            "section": "4.1",
+            "heading": "Late fee rule",
+            "parentSection": "4. Late fees",
+            "score": 3.879,
+            "text": "A **2% one-time late fee** may be assessed on an overdue amount after the applicable due date, unless an approved exception applies. This document describes the rule but does not calculate or post fees automatically."
+          },
+          {
+            "section": "5.1",
+            "heading": "Merit scholarship",
+            "parentSection": "5. Scholarships and adjustments",
+            "score": 2.663,
+            "text": "The standard merit scholarship may reduce assessed tuition by **25%** for eligible students. Eligibility is decided by the university and recorded separately."
+          }
+        ],
+        "message": null
+      }
+    },
+    {
+      "step": 2,
+      "tool": "query_tuition",
+      "channel": "REST via API Gateway",
+      "input": {},
+      "result": {
+        "studentNo": "2021001",
+        "scope": "OVERALL",
+        "term": null,
+        "tuitionTotal": 6000.0,
+        "paidAmount": 1000.0,
+        "balance": 5000.0,
+        "currency": "USD",
+        "terms": [
+          {
+            "term": "2026-FALL",
+            "tuitionTotal": 3000.0,
+            "paidAmount": 1000.0,
+            "balance": 2000.0,
+            "currency": "USD"
+          },
+          {
+            "term": "2027-SPRING",
+            "tuitionTotal": 3000.0,
+            "paidAmount": 0.0,
+            "balance": 3000.0,
+            "currency": "USD"
+          }
+        ]
+      }
+    }
+  ],
+  "final_answer": "According to **Section 3.1 (Eligibility)** of the University Tuition Policies, students with an outstanding balance of at least **$300** may request an installment arrangement. \n\nYour current overall outstanding balance for student number **2021001** is **$5,000.00** ($2,000.00 for 2026-FALL and $3,000.00 for 2027-SPRING), which meets the minimum threshold. \n\nHowever, please note that an installment arrangement is subject to approval by the university and is not automatically granted simply by meeting the balance requirement or making a partial payment (**Section 3.1** and **Section 3.4**). \n\nIf you would like to request an installment plan, you may submit a request to the university administration."
+}

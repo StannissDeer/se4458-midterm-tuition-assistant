@@ -22,6 +22,7 @@ services:
       DATABASE_URL: postgresql+psycopg2://tuition:tuition@db:5432/tuition
       JWT_SECRET: change-me-dev-secret-at-least-32-bytes!!
       JWT_ISSUER: tuition-auth
+      GATEWAY_SECRET: local-dev-gateway-secret   # must match kong.yml
     depends_on:
       db: { condition: service_healthy }
     # Not published on the host on purpose: clients must go through Kong.

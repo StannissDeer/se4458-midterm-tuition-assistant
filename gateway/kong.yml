@@ -87,6 +87,14 @@ consumers:
         secret: change-me-dev-secret-at-least-32-bytes!!
 
 plugins:
+  # Adds the shared gateway secret to every upstream request (any client-sent copy is removed
+  # first). The API rejects requests without it, so the API is reachable ONLY through Kong.
+  - name: request-transformer
+    config:
+      remove:
+        headers: [X-Gateway-Secret]
+      add:
+        headers: ["X-Gateway-Secret:local-dev-gateway-secret"]
   # Global safety net: 120 requests/minute per client IP for everything.
   - name: rate-limiting
     config:

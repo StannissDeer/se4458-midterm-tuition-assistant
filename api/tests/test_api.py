@@ -267,3 +267,16 @@ def test_openapi_lists_versioned_routes(client):
     paths = client.get("/openapi.json").json()["paths"]
     assert all(p.startswith("/api/v1/") or p == "/health" for p in paths)
     assert "/api/v1/banking/tuition/payments" in paths
+
+
+# ============================================================ Gateway-only access
+class TestGatewaySecret:
+    def test_direct_call_without_gateway_secret_is_rejected(self, client, monkeypatch):
+        monkeypatch.setattr(settings, "GATEWAY_SECRET", "s3cret")
+        r = client.get(f"{V1}/mobile/tuition/1001")
+        assert r.status_code == 403 and r.json()["error"]["code"] == "GATEWAY_REQUIRED"
+
+    def test_call_with_gateway_secret_is_allowed(self, client, monkeypatch):
+        monkeypatch.setattr(settings, "GATEWAY_SECRET", "s3cret")
+        r = client.get(f"{V1}/mobile/tuition/1001", headers={"X-Gateway-Secret": "s3cret"})
+        assert r.status_code == 200

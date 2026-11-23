@@ -1,11 +1,14 @@
 """Tuition REST API. All operations are versioned under /api/v1 (a v2 router can be mounted
 side by side without breaking v1 clients)."""
+import hmac
 from contextlib import asynccontextmanager
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, Request
+from fastapi.responses import JSONResponse
 
+from .config import settings
 from .db import Base, engine
-from .errors import register_error_handlers
+from .errors import error_body, register_error_handlers
 from .routers import admin, auth, banking, mobile
 
 
@@ -33,6 +36,17 @@ def create_app(with_lifespan: bool = True) -> FastAPI:
     )
     register_error_handlers(app)
     app.include_router(build_v1())
+
+    @app.middleware("http")
+    async def require_gateway(request: Request, call_next):
+        # Requests that did not come through the API Gateway are rejected.
+        secret = settings.GATEWAY_SECRET
+        if secret and not hmac.compare_digest(request.headers.get("X-Gateway-Secret", ""), secret):
+            return JSONResponse(
+                status_code=403,
+                content=error_body(403, "GATEWAY_REQUIRED", "Requests must go through the API Gateway"),
+            )
+        return await call_next(request)
 
     @app.get("/health", tags=["Health"])
     def health():

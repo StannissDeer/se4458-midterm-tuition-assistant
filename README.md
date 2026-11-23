@@ -5,7 +5,10 @@ A conversational assistant for students asking about tuition deadlines, installm
 - **MCP Server**: indexed search over `University_Tuition_Policies.md`, for policy questions.
 - **Tuition REST API through the Kong API Gateway**: live balances and simulated payments.
 
-> **Links to fill in before submission:** demo video `<link>` · gateway URL `<https://...>` · MCP URL `<https://.../mcp>`
+> **Live deployment (Azure):**
+> - API Gateway: https://tuition-gateway.delightfulforest-2c0bb7e1.polandcentral.azurecontainerapps.io (Swagger: `/docs`)
+> - MCP server: https://tuition-mcp.delightfulforest-2c0bb7e1.polandcentral.azurecontainerapps.io/mcp
+> - Demo video: <VIDEO_LINK>
 
 ---
 
@@ -34,8 +37,8 @@ flowchart LR
 | `api/` | FastAPI REST service, SQLAlchemy models, JWT auth, unit tests |
 | `mcp_server/` | MCP SDK server, chunker and BM25 indexer, policy document, tests |
 | `agent/` | Gemini agent, MCP client, gateway REST client, CLI chat, tests with a fake LLM |
-| `gateway/kong.yml` | Declarative Kong config: routes, JWT, per-student rate limit |
-| `docs/` | OpenAPI spec, ER diagram, MCP tool schema, test results |
+| `gateway/` | `kong.yml` (declarative Kong config: routes, JWT, per-student rate limit, gateway secret) and the cloud `Dockerfile` |
+| `docs/` | OpenAPI spec, ER diagram, MCP tool schema, test results, screenshots, tool traces |
 | `test-data/` | Sample CSV for batch upload |
 
 **Technology:** Python 3.12+, FastAPI, SQLAlchemy 2, PostgreSQL 16, Kong 3.9 (DB-less), MCP Python SDK v2 (`MCPServer`), `google-genai` (Gemini), pytest.
@@ -111,12 +114,12 @@ Request:
 ```http
 POST /api/v1/banking/tuition/payments
 Authorization: Bearer <jwt>
-{"studentNo":"2021001","term":"2026-FALL","amount":5000,"transactionId":"BANK-001"}
+{"studentNo":"2021001","term":"2026-FALL","amount":500,"transactionId":"BANK-001"}
 ```
 Response:
 ```json
 201 {"paymentStatus":"SUCCESS","transactionId":"BANK-001","studentNo":"2021001","term":"2026-FALL",
-     "paidAmount":5000.0,"totalPaid":20000.0,"remainingBalance":25000.0,"currency":"TRY"}
+     "paidAmount":500.0,"totalPaid":1500.0,"remainingBalance":1500.0,"currency":"USD"}
 ```
 
 **Error format** (all API errors):
@@ -155,6 +158,8 @@ Config file: `gateway/kong.yml`. All REST operations go through it, including th
 - The route regex captures `studentNo` from the URL. A `pre-function` writes it into the `X-Student-No` header, overwriting anything the client sent. `rate-limiting` then uses `limit_by: header`.
 - Result: the limit applies **per student identity, not per client IP**.
 - The API enforces the same rule in the database (`mobile_query_usage` table), so the limit still holds if the gateway restarts or runs as several replicas with local counters.
+
+**Gateway-only access:** Kong adds a shared secret header (`X-Gateway-Secret`) to every upstream request, after removing any copy sent by the client. The API rejects any request without the correct value (403 `GATEWAY_REQUIRED`). So even where the API's URL is reachable (as in the Azure deployment), it can only be used through the gateway.
 
 **JWT:** the API signs HS256 tokens with `iss = tuition-auth`. The Kong consumer `tuition-auth-service` has a credential with `key = tuition-auth`, so Kong validates the signature and `exp` before forwarding. The API validates the token again (defence in depth) and authorizes the request: matching student number, or admin role.
 
@@ -253,9 +258,11 @@ curl -s localhost:8001/routes | python -m json.tool
 | 5 | Gateway: protected route, 401 without token / 200 with token | `docs/screenshots/07-gateway-401.png` |
 | 6 | Swagger UI through the gateway | `docs/screenshots/10-swagger.png` |
 | 7 | Three distinct MCP retrieval queries over the MCP protocol | `docs/screenshots/11-mcp-queries.png` |
-| 8 | Unit tests: 62 passed | `docs/screenshots/12-tests.png` |
+| 8 | Unit tests (taken before the 2 gateway-secret tests were added; current total is 64) | `docs/screenshots/12-tests.png` |
+| 9 | **Azure:** agent running fully in the cloud (Kong + API + PostgreSQL + MCP), combined scenario | `docs/screenshots/13-cloud-agent.png`, `docs/screenshots/13-cloud-agent-2.png` |
+| 10 | **Azure:** gateway 401 without token, direct API call blocked (403 `GATEWAY_REQUIRED`), per-student limit 200/200/200/429 | `docs/screenshots/15-cloud-gateway.png` |
 
-JSON tool traces of the demo conversations: `docs/traces/`.
+JSON tool traces of the demo conversations: `docs/traces/` (`1-mcp-only`, `2-rest-only`, `3-combined`, `4a`/`4b` payment, `5-cloud-combined` on Azure).
 
 ---
 
@@ -277,44 +284,86 @@ TEST_DATABASE_URL=postgresql+psycopg2://tuition:tuition@localhost:5432/tuition_t
 
 | Suite | Tests | Covers |
 |---|---|---|
-| `api/tests` | 43 | Every operation, success and failure cases: auth, mobile limit per student, term vs overall, 401/403/expired/tampered tokens, partial and full payment, duplicate transaction, overpayment, upsert rules, CSV partial failures, paging |
+| `api/tests` | 45 | Every operation, success and failure cases: auth, mobile limit per student, term vs overall, 401/403/expired/tampered tokens, partial and full payment, duplicate transaction, overpayment, upsert rules, CSV partial failures, paging |
 | `mcp_server/tests` | 10 | Chunking, document ID, index save and reload, 4 distinct retrieval queries, MCP protocol `list_tools` / `call_tool` with the Section 9 response shape, empty query |
 | `agent/tests` | 9 | MCP-only, REST-only and combined scenarios; payment confirmed (with current balance shown) or declined; unknown term; overpayment; identity from session; trace format. Uses a **scripted fake LLM**, so no API key is needed |
 
 - None of the tests need the cloud, the gateway or a live LLM.
 - The API tests use in-memory SQLite **for test isolation only**; the application itself runs on PostgreSQL. The same suite also passes on PostgreSQL via `TEST_DATABASE_URL`.
-- Latest run: `docs/test-results.txt` (**62 passed**).
+- Latest run: `docs/test-results.txt` (**64 passed**).
 
 ---
 
-## 9. Cloud deployment (Azure, low cost)
+## 9. Cloud deployment (Azure)
 
-| Component | Azure service |
-|---|---|
-| PostgreSQL | Azure Database for PostgreSQL – Flexible Server (Burstable B1ms) |
-| Tuition API | Azure Container Apps (internal ingress only) |
-| MCP server | Azure Container Apps (external ingress, `/mcp`) |
-| API Gateway | Kong on Azure Container Apps with `gateway/kong.yml` (or Azure API Management, Consumption tier, with the same routes and policies) |
+**Live URLs**
+- API Gateway: `https://tuition-gateway.delightfulforest-2c0bb7e1.polandcentral.azurecontainerapps.io` (Swagger: `/docs`)
+- MCP server: `https://tuition-mcp.delightfulforest-2c0bb7e1.polandcentral.azurecontainerapps.io/mcp`
 
-```bash
-az group create -n se4458 -l westeurope
-az postgres flexible-server create -g se4458 -n tuition-db --tier Burstable --sku-name Standard_B1ms \
-   --admin-user tuition --admin-password '<pw>' --database-name tuition --public-access 0.0.0.0
-az containerapp env create -g se4458 -n tuition-env -l westeurope
-az containerapp up -g se4458 -n tuition-api --environment tuition-env --source ./api --ingress internal --target-port 8000 \
-   --env-vars DATABASE_URL='postgresql+psycopg2://tuition:<pw>@tuition-db.postgres.database.azure.com:5432/tuition?sslmode=require' \
-              JWT_SECRET='<secret>' JWT_ISSUER=tuition-auth
-az containerapp up -g se4458 -n tuition-mcp --environment tuition-env --source ./mcp_server --ingress external --target-port 8100
-# Kong: build an image FROM kong:3.9 with gateway/kong.yml (set service url to http://tuition-api), ingress external, port 8000
+| Component | Azure resource | Region |
+|---|---|---|
+| PostgreSQL 16 | Azure Database for PostgreSQL – Flexible Server, Burstable B1ms (`tuition-db-*`) | Poland Central |
+| Container registry | Azure Container Registry, Basic (`tuitionacr*`) | Poland Central |
+| Tuition API | Container App `tuition-api` (`api/Dockerfile`). Only accepts requests carrying the gateway secret | Poland Central |
+| API Gateway | Container App `tuition-gateway` (Kong, `gateway/Dockerfile`), external ingress | Poland Central |
+| MCP server | Container App `tuition-mcp` (`mcp_server/Dockerfile`), external ingress | Poland Central |
+
+`gateway/Dockerfile` writes `API_URL`, `JWT_SECRET` and `GATEWAY_SECRET` from environment variables into `kong.yml` when the container starts. Secrets are passed as Container App environment variables and are not stored in the repository.
+
+**Deployment steps** (PowerShell, from the repository root; secrets generated locally and kept out of Git):
+```powershell
+az login
+az extension add --name containerapp --upgrade
+$RG="se4458-rg"; $LOC="polandcentral"; $ENV="tuition-env"; $PG="tuition-db-<n>"; $ACR="tuitionacr<n>"
+$PGPASS="<alphanumeric>"; $JWT="<alphanumeric>"; $GWSECRET="<alphanumeric>"
+
+az group create -n $RG -l $LOC
+az postgres flexible-server create -g $RG -n $PG -l $LOC --tier Burstable --sku-name Standard_B1ms --storage-size 32 `
+  --version 16 --admin-user tuition --admin-password $PGPASS --public-access 0.0.0.0 --yes
+az postgres flexible-server db create -g $RG --server-name $PG --name tuition
+az containerapp env create -g $RG -n $ENV -l $LOC
+az acr create -g $RG -n $ACR -l $LOC --sku Basic --admin-enabled true
+az acr login -n $ACR
+$ACRUSER = az acr credential show -n $ACR --query username -o tsv
+$ACRPASS = az acr credential show -n $ACR --query "passwords[0].value" -o tsv
+
+# API
+docker build -t "$ACR.azurecr.io/tuition-api:v2" ./api; docker push "$ACR.azurecr.io/tuition-api:v2"
+az containerapp create -g $RG -n tuition-api --environment $ENV --image "$ACR.azurecr.io/tuition-api:v2" `
+  --registry-server "$ACR.azurecr.io" --registry-username $ACRUSER --registry-password $ACRPASS `
+  --ingress external --target-port 8000 `
+  --env-vars "DATABASE_URL=postgresql+psycopg2://tuition:$PGPASS@$PG.postgres.database.azure.com:5432/tuition?sslmode=require" `
+             "JWT_SECRET=$JWT" "JWT_ISSUER=tuition-auth" "GATEWAY_SECRET=$GWSECRET"
+$API_FQDN = az containerapp show -g $RG -n tuition-api --query properties.configuration.ingress.fqdn -o tsv
+
+# Gateway
+docker build -t "$ACR.azurecr.io/tuition-gateway:v2" ./gateway; docker push "$ACR.azurecr.io/tuition-gateway:v2"
+az containerapp create -g $RG -n tuition-gateway --environment $ENV --image "$ACR.azurecr.io/tuition-gateway:v2" `
+  --registry-server "$ACR.azurecr.io" --registry-username $ACRUSER --registry-password $ACRPASS `
+  --ingress external --target-port 8000 --env-vars "API_URL=https://$API_FQDN" "JWT_SECRET=$JWT" "GATEWAY_SECRET=$GWSECRET"
+
+# MCP
+docker build -t "$ACR.azurecr.io/tuition-mcp:v1" ./mcp_server; docker push "$ACR.azurecr.io/tuition-mcp:v1"
+az containerapp create -g $RG -n tuition-mcp --environment $ENV --image "$ACR.azurecr.io/tuition-mcp:v1" `
+  --registry-server "$ACR.azurecr.io" --registry-username $ACRUSER --registry-password $ACRPASS `
+  --ingress external --target-port 8100
 ```
 
-Fill in the deployed URLs at the top of this README.
+Notes:
+- PostgreSQL was not allowed in `westeurope` on the Azure for Students subscription, so everything runs in `polandcentral`.
+- The environment is an "express" Container Apps environment, where internal ingress was not reachable from the gateway. The API therefore has external ingress, but it is locked to the gateway by the shared secret header (direct calls get 403).
+- Apps scale to zero when idle, so the first request after a pause can take 10–30 s.
+
+Agent against the cloud:
+`python chat.py --user ayse --password ayse123 --gateway https://tuition-gateway.delightfulforest-2c0bb7e1.polandcentral.azurecontainerapps.io --mcp https://tuition-mcp.delightfulforest-2c0bb7e1.polandcentral.azurecontainerapps.io/mcp`
+
+**Cost and clean-up:** about $15–20/month, covered by Azure for Students credit. After grading: `az group delete -n se4458-rg --yes`.
 
 ---
 
 ## 10. LLM cost
 - Gemini **free tier** (Google AI Studio key), model `gemini-3.5-flash` (configurable with `GEMINI_MODEL`). A demo session uses only a few thousand tokens per question, which costs $0 on the free tier.
-- Free-tier 429/503 errors are retried with exponential backoff.
+- Free-tier 429/503 errors are retried with exponential backoff; if the main model stays unavailable the agent falls back to `GEMINI_FALLBACK_MODELS` (default `gemini-3.5-flash-lite,gemini-3.1-flash-lite`).
 - Every test uses a fake LLM, so grading the tests costs nothing.
 
 ---
